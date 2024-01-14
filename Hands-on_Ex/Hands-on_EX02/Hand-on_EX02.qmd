@@ -1,5 +1,5 @@
 ---
-title: "Hands-on_EX02: "
+title: "Hands-on_EX02: Creating choropleth maps"
 ---
 
 Downloading and loading packages that will be used in this exercise
