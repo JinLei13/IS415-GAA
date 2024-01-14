@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>IS415-GAA</title>
+<title>IS415-GAA - Hands-on Exercise 1: Geospatial Data Wrangling</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,25 +20,59 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-html/quarto.js"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -60,8 +94,10 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed">
@@ -71,7 +107,7 @@ ul.task-list li input[type="checkbox"] {
     <nav class="navbar navbar-expand-lg navbar-dark ">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../../index.html">
     <span class="navbar-title">IS415-GAA</span>
     </a>
   </div>
@@ -81,29 +117,16 @@ ul.task-list li input[type="checkbox"] {
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-hands-on-exercise" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
- <span class="menu-text">Hands-on Exercise</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-hands-on-exercise">    
-        <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_EX01/Hands-on_EX01.html" rel="" target="">
- <span class="dropdown-text">Hands-on Exercise 1</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_EX02/Hands-on_EX02.html" rel="" target="">
- <span class="dropdown-text">Hands-on Exercise 2</span></a>
-  </li>  
-    </ul>
-  </li>
+  <li class="dropdown-header">
+ <span class="menu-text">text:"Hands-on Exercise" - text:"Hands-on Exercise 1" href:"Hands-on_Ex/Hands-on_EX01/Hands-on_EX01.html" - text:"Hands-on Exercise 2" href:"Hands-on_Ex/Hands-on_EX02/Hands-on_EX02.html"</span></li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" rel="" target="" aria-current="page">
+    <a class="nav-link" href="../../index.html" rel="" target="">
  <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./about.html" rel="" target="">
+    <a class="nav-link" href="../../about.html" rel="" target="">
  <span class="menu-text">About</span></a>
   </li>  
 </ul>
@@ -125,7 +148,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">IS415-GAA</h1>
+<h1 class="title">Hands-on Exercise 1: Geospatial Data Wrangling</h1>
 </div>
 
 
@@ -140,8 +163,64 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<p>Welcome to IS415 Geospatial and Applications</p>
-<p>This is the course website of Chuang Jin Lei and you will find my course work on this website.</p>
+<p>Loading packages that are needed for the exercise</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Saving the different datasets as R objects</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mpsz <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_EX01/data/geospatial "</span>, </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>               <span class="at">layer =</span> <span class="st">"MP14_SUBZONE_WEB_PL"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `MP14_SUBZONE_WEB_PL' from data source 
+  `/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_EX01/data/geospatial ' 
+  using driver `ESRI Shapefile'
+Simple feature collection with 323 features and 15 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 2667.538 ymin: 15748.72 xmax: 56396.44 ymax: 50256.33
+Projected CRS: SVY21</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cyclingpath <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_EX01/data/geospatial "</span>, </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                      <span class="at">layer =</span> <span class="st">"CyclingPathGazette"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `CyclingPathGazette' from data source 
+  `/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_EX01/data/geospatial ' 
+  using driver `ESRI Shapefile'
+Simple feature collection with 2558 features and 2 fields
+Geometry type: MULTILINESTRING
+Dimension:     XY
+Bounding box:  xmin: 11854.32 ymin: 28347.98 xmax: 42626.09 ymax: 48948.15
+Projected CRS: SVY21</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>preschool <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_EX01/data/geospatial /PreSchoolsLocation.kml"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `PRESCHOOLS_LOCATION' from data source 
+  `/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_EX01/data/geospatial /PreSchoolsLocation.kml' 
+  using driver `KML'
+Simple feature collection with 2290 features and 2 fields
+Geometry type: POINT
+Dimension:     XYZ
+Bounding box:  xmin: 103.6878 ymin: 1.247759 xmax: 103.9897 ymax: 1.462134
+z_range:       zmin: 0 zmax: 0
+Geodetic CRS:  WGS 84</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>listings <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_EX01/data/aspatial/listings.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 3457 Columns: 75
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr  (25): listing_url, source, name, neighborhood_overview, picture_url, ho...
+dbl  (36): id, scrape_id, host_id, host_listings_count, host_total_listings_...
+lgl   (9): description, host_is_superhost, host_has_profile_pic, host_identi...
+date  (5): last_scraped, host_since, calendar_last_scraped, first_review, la...
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+</div>
+<p>st_geometry(mpsz) glimpse(mpsz) head(mpsz, n=5)</p>
+<p>plot(mpsz) plot(st_geometry(mpsz)) plot(mpsz[“PLN_AREA_N”]) st_crs(mpsz) mpsz3414 &lt;- st_set_crs(mpsz, 3414) st_crs(mpsz3414) preschool3414 &lt;- st_transform(preschool, crs = 3414) list(listings) listings_sf &lt;- st_as_sf(listings, coords = c(“longitude”, “latitude”), crs=4326) %&gt;% st_transform(crs = 3414) glimpse(listings_sf) buffer_cycling &lt;- st_buffer(cyclingpath, dist=5, nQuadSegs = 30) buffer_cycling<span class="math inline">\(AREA &lt;- st_area(buffer_cycling) sum(buffer_cycling\)</span>AREA) mpsz3414<span class="math inline">\(`PreSch Count`&lt;- lengths(st_intersects(mpsz3414, preschool3414)) summary(mpsz3414\)</span><code>PreSch Count</code>) top_n(mpsz3414, 1, <code>PreSch Count</code>) mpsz3414<span class="math inline">\(Area &lt;- mpsz3414 %&gt;%  st_area() mpsz3414 &lt;- mpsz3414 %&gt;%  mutate(`PreSch Density` = `PreSch Count`/Area * 1000000) hist(mpsz3414\)</span><code>PreSch Density</code>) ggplot(data=mpsz3414, aes(x= as.numeric(<code>PreSch Density</code>)))+ geom_histogram(bins=20, color=“black”, fill=“light blue”) + labs(title = “Are pre-school even distributed in Singapore?”, subtitle= “There are many planning sub-zones with a single pre-school, on the other hand, are two planning sub-zones with at least 20 pre-schools”, x = “Pre-school density (per km sq)”, y = “Frequency”) ggplot(data=mpsz3414, aes(y = <code>PreSch Count</code>, x= as.numeric(<code>PreSch Density</code>)))+ geom_point(color=“black”, fill=“light blue”) + xlim(0, 40) + ylim(0, 40) + labs(title = ““, x =”Pre-school density (per km sq)“, y =”Pre-school count”)</p>
 
 
 
