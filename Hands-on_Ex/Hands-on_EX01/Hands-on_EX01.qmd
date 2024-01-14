@@ -1,3 +1,0 @@
----
-title: "Hands-on Exercise 1: Geospatial Data Wrangling"
----
