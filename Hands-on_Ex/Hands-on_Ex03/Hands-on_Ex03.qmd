@@ -1,20 +1,20 @@
 ---
-title: "Hands-on_EX03: "Spatial Point Pattern Analysis Methods"
+title: "Hands-on EX03: Spatial Point Pattern Analysis Methods"
 ---
 
 Loading libraries that are needed for this exercise
 
 ```{r}
-pacman::p_load(sp,sf, raster, spatstat, tmap)
+pacman::p_load(sp, sf, raster, spatstat, tmap)
 ```
 
 importing data that are needed for this analysis
 
 ```{r}
-childcare_sf <- st_read("/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_Ex03/data/geospatial/ChildCareServices.geojson") |>
+childcare_sf <- st_read("data/geospatial/ChildCareServices.geojson") |>
   st_transform(crs = 3414)
-sg_sf <- st_read(dsn = "/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_Ex03/data/geospatial", layer="CostalOutline")
-mpsz_sf <- st_read(dsn = "/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/Hands-on_Ex/Hands-on_Ex03/data/geospatial", 
+sg_sf <- st_read(dsn = "data/geospatial", layer="CostalOutline")
+mpsz_sf <- st_read(dsn = "data/geospatial", 
                 layer = "MP14_SUBZONE_WEB_PL")
 
 ```

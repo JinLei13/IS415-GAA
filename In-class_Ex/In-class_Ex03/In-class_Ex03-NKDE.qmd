@@ -1,0 +1,75 @@
+---
+title: "In-class_Ex03-NKDE"
+---
+
+Loading packages that will be used for this exercise
+
+```{r}
+pacman::p_load(sf, spNetwork, tmap, classInt, viridis, tidyverse)
+```
+
+Data import and preparation
+
+```{r}
+network <- st_read(dsn = "/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/In-class_Ex/In-class_Ex03/data/geospatial", layer = "Punggol_St")
+childcare <- st_read(dsn = "/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/In-class_Ex/In-class_Ex03/data/geospatial", layer = "Punggol_CC")
+```
+
+```{r}
+st_crs(childcare)
+st_crs(network)
+
+```
+
+Both data have the correct EPSG code of 3414 for the svy21 coordinate system. No change of EPSG code needed.
+
+Plotting of data
+
+```{r}
+tmap_mode('view')
+tm_shape(childcare) + 
+  tm_dots() + 
+  tm_shape(network) + 
+  tm_lines()
+tmap_mode('plot')
+
+```
+
+segment the line from the data
+
+```{r}
+lixels <- lixelize_lines(network, 750, 375)
+```
+
+Generating line centre points
+
+```{r}
+samples <- lines_center(lixels)
+```
+
+```{r}
+densities <- nkde(network, events = childcare, w = rep(1, nrow(childcare)), samples = samples, kernel_name = "quartic", bw = 300, div = "bw", method = "simple", digits = 1, tol = 1, grid_shape = c(1,1), max_depth = 8, agg = 5, sparse = TRUE, verbose = FALSE)
+```
+
+Inputting density data into samples and lixels objects
+
+```{r}
+samples$density <- densities
+lixels$density <- densities
+```
+
+Rescaling unit of measurement
+
+```{r}
+samples$density <- samples$density*1000
+lixels$density <- lixels$density*1000
+```
+
+```{r}
+tmap_mode('view')
+tm_shape(lixels) + 
+  tm_lines(col = "density") +
+  tm_shape(childcare) +
+  tm_dots() 
+tmap_mode('plot')
+```
