@@ -1,0 +1,143 @@
+---
+title: "In-class Exercise 02"
+---
+
+
+## Loading packages that will be used for this in-class exercise
+
+New packages:
+
+1.  arrow: Exposes an interface to the Arrow C++ library, this will be used to read Parquet files into R environment
+2.  lubridate: To handle data that contains date and time dataframe in R
+
+
+```{r}
+pacman::p_load(arrow, lubridate, tidyverse, tmap,sf)
+```
+
+
+## Importing Grab-Posisi Dataset
+
+
+```{r}
+df <- read_parquet("data/GrabPosisi/part-00000-8bbff892-97d2-4011-9961-703e38972569.c000.snappy.parquet")
+```
+
+
+### Looking at data
+
+
+```{r}
+glimpse(df)
+```
+
+
+-   df is a tibble data.frame and needs to be converted into a shapefile object
+
+## Data preparation
+
+## Converting "pingtimestamp" from integer format to date/time format
+
+
+```{r}
+df <- df |> mutate(pingtimestamp = as_datetime(pingtimestamp))
+```
+
+
+### Saving new dataframe as rds format for subsequent use
+
+
+```{r}
+write_rds(df, "data/rds/part0.rds")
+```
+
+
+## Extracting trip starting locations
+
+
+```{r}
+origin_df <- df |>
+  group_by(trj_id) |>
+  arrange(pingtimestamp) |>
+  filter(row_number()==1) |>
+  mutate(weekday = wday(pingtimestamp,
+                        label=TRUE,
+                        abbr=TRUE),
+         start_hr = factor(hour(pingtimestamp)),
+         day = factor(mday(pingtimestamp)))
+
+```
+
+
+## Extracting trip ending locations
+
+
+```{r}
+destination_df <- df |>
+  group_by(trj_id) |>
+  arrange(desc(pingtimestamp)) |>
+  filter(row_number()==1) |>
+  mutate(weekday = wday(pingtimestamp,
+                        label=TRUE,
+                        abbr=TRUE),
+         end_hr = factor(hour(pingtimestamp)),
+         day = factor(mday(pingtimestamp)))
+```
+
+
+## Saving trips starting location dataframe and trips ending location dataframe
+
+
+```{r}
+write_rds(origin_df, "data/rds/origin_df.rds")
+write_rds(destination_df, "data/rds/destination_df.rds")
+```
+
+
+## Converting aspatial data into geospatial data
+
+
+```{r}
+origin_sf <- st_as_sf(origin_df, coords = c("rawlng", "rawlat"), crs=4326) |> st_transform(crs = 3414)
+```
+
+
+## Data frequency distribution
+
+
+```{r}
+ggplot(data=origin_df, 
+       aes(x=weekday)) + 
+  geom_bar()
+```
+
+
+## Visualising as Point symbol Map
+
+
+```{r}
+tmap_mode("plot")
+tm_shape(origin_sf) +
+  tm_dots()
+```
+
+
+## Importing Master Plan 2019 Subzone
+
+
+```{r}
+mpsz2019 <- st_read("data/dataGov/MPSZ2019.kml") %>%
+  st_transform(crs = 3414)
+```
+
+
+## Plotting of point symbol map
+
+
+```{r}
+tm_shape(mpsz2019) +
+  tm_polygons() +
+tm_shape(origin_sf) +
+  tm_dots()
+```
+

@@ -1,5 +1,5 @@
 ---
-title: "In-class_Ex03-NKDE"
+title: "In-class Exercise 03: Network Kernel Density Estimation"
 ---
 
 Loading packages that will be used for this exercise
@@ -11,8 +11,8 @@ pacman::p_load(sf, spNetwork, tmap, classInt, viridis, tidyverse)
 Data import and preparation
 
 ```{r}
-network <- st_read(dsn = "/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/In-class_Ex/In-class_Ex03/data/geospatial", layer = "Punggol_St")
-childcare <- st_read(dsn = "/Users/chuangjinlei/Desktop/JinLei13/IS415-GAA/In-class_Ex/In-class_Ex03/data/geospatial", layer = "Punggol_CC")
+network <- st_read(dsn = "data/geospatial", layer = "Punggol_St")
+childcare <- st_read(dsn = "data/geospatial", layer = "Punggol_CC")
 ```
 
 ```{r}

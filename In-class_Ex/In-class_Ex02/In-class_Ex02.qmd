@@ -2,7 +2,7 @@
 title: "In-class Exercise 02"
 ---
 
-## Loading packages that will be used for this in-class exercise 
+## Loading packages that will be used for this in-class exercise
 
 New packages:
 
@@ -13,13 +13,13 @@ New packages:
 pacman::p_load(arrow, lubridate, tidyverse, tmap,sf)
 ```
 
-## Importing Grab-Posisi Dataset 
+## Importing Grab-Posisi Dataset
 
 ```{r}
 df <- read_parquet("data/GrabPosisi/part-00000-8bbff892-97d2-4011-9961-703e38972569.c000.snappy.parquet")
 ```
 
-### Looking at data 
+### Looking at data
 
 ```{r}
 glimpse(df)
@@ -27,15 +27,15 @@ glimpse(df)
 
 -   df is a tibble data.frame and needs to be converted into a shapefile object
 
-## Data preparation 
+## Data preparation
 
-## Converting "pingtimestamp" from integer format to date/time format 
+## Converting "pingtimestamp" from integer format to date/time format
 
 ```{r}
 df <- df |> mutate(pingtimestamp = as_datetime(pingtimestamp))
 ```
 
-### Saving new dataframe as rds format for subsequent use 
+### Saving new dataframe as rds format for subsequent use
 
 ```{r}
 write_rds(df, "data/rds/part0.rds")
@@ -70,20 +70,20 @@ destination_df <- df |>
          day = factor(mday(pingtimestamp)))
 ```
 
-## Saving trips starting location dataframe and trips ending location dataframe 
+## Saving trips starting location dataframe and trips ending location dataframe
 
 ```{r}
 write_rds(origin_df, "data/rds/origin_df.rds")
 write_rds(destination_df, "data/rds/destination_df.rds")
 ```
 
-## Converting aspatial data into geospatial data 
+## Converting aspatial data into geospatial data
 
 ```{r}
 origin_sf <- st_as_sf(origin_df, coords = c("rawlng", "rawlat"), crs=4326) |> st_transform(crs = 3414)
 ```
 
-## Data frequency distribution 
+## Data frequency distribution
 
 ```{r}
 ggplot(data=origin_df, 
@@ -91,7 +91,7 @@ ggplot(data=origin_df,
   geom_bar()
 ```
 
-## Visualising as Point symbol Map 
+## Visualising as Point symbol Map
 
 ```{r}
 tmap_mode("plot")
@@ -99,14 +99,14 @@ tm_shape(origin_sf) +
   tm_dots()
 ```
 
-## Importing Master Plan 2019 Subzone 
+## Importing Master Plan 2019 Subzone
 
 ```{r}
 mpsz2019 <- st_read("data/dataGov/MPSZ2019.kml") %>%
   st_transform(crs = 3414)
 ```
 
-## Plotting of point symbol map 
+## Plotting of point symbol map
 
 ```{r}
 tm_shape(mpsz2019) +
