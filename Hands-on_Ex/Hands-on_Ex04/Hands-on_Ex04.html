@@ -151,6 +151,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex03/In-class_Ex03-NKDE.html" rel="" target="">
  <span class="dropdown-text">In-class Exercise 3</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex03/In-class_Ex04.html" rel="" target="">
+ <span class="dropdown-text">In-class Exercise 4</span></a>
+  </li>  
     </ul>
   </li>
 </ul>
@@ -180,7 +184,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#loading-packages-that-will-be-used-for-this-hands-on-exercise" id="toc-loading-packages-that-will-be-used-for-this-hands-on-exercise" class="nav-link active" data-scroll-target="#loading-packages-that-will-be-used-for-this-hands-on-exercise">Loading packages that will be used for this hands-on exercise</a></li>
-  <li><a href="#importing-the-datasets-that-will-be-used-for-this-hands-on-exercise." id="toc-importing-the-datasets-that-will-be-used-for-this-hands-on-exercise." class="nav-link" data-scroll-target="#importing-the-datasets-that-will-be-used-for-this-hands-on-exercise.">Importing the datasets that will be used for this hands-on exercise.</a></li>
+  <li><a href="#importing-the-datasets-that-will-be-used-for-this-hands-on-exercise" id="toc-importing-the-datasets-that-will-be-used-for-this-hands-on-exercise" class="nav-link" data-scroll-target="#importing-the-datasets-that-will-be-used-for-this-hands-on-exercise">Importing the datasets that will be used for this hands-on exercise</a></li>
   <li><a href="#performing-relational-join-on-the-two-datasets" id="toc-performing-relational-join-on-the-two-datasets" class="nav-link" data-scroll-target="#performing-relational-join-on-the-two-datasets">Performing relational join on the two datasets</a></li>
   <li><a href="#creating-a-basemap-and-choropleth-map-showing-the-distribution-of-gdppc-2012" id="toc-creating-a-basemap-and-choropleth-map-showing-the-distribution-of-gdppc-2012" class="nav-link" data-scroll-target="#creating-a-basemap-and-choropleth-map-showing-the-distribution-of-gdppc-2012">Creating a basemap and choropleth map showing the distribution of GDPPC 2012</a></li>
   <li><a href="#computing-contiguity-spatial-weights" id="toc-computing-contiguity-spatial-weights" class="nav-link" data-scroll-target="#computing-contiguity-spatial-weights">Computing Contiguity Spatial Weights</a></li>
@@ -266,8 +270,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, spdep, tmap, tidyverse, knitr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="importing-the-datasets-that-will-be-used-for-this-hands-on-exercise." class="level2">
-<h2 class="anchored" data-anchor-id="importing-the-datasets-that-will-be-used-for-this-hands-on-exercise.">Importing the datasets that will be used for this hands-on exercise.</h2>
+<section id="importing-the-datasets-that-will-be-used-for-this-hands-on-exercise" class="level2">
+<h2 class="anchored" data-anchor-id="importing-the-datasets-that-will-be-used-for-this-hands-on-exercise">Importing the datasets that will be used for this hands-on exercise</h2>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>hunan <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data/geospatial"</span>, <span class="at">layer =</span> <span class="st">"Hunan"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">

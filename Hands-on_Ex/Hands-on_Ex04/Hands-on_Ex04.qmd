@@ -8,7 +8,7 @@ title: "Hands-on Exercise 04: Spatial Weights and Applications "
 pacman::p_load(sf, spdep, tmap, tidyverse, knitr)
 ```
 
-## Importing the datasets that will be used for this hands-on exercise.
+## Importing the datasets that will be used for this hands-on exercise
 
 ```{r}
 hunan <- st_read(dsn = "data/geospatial", layer = "Hunan")

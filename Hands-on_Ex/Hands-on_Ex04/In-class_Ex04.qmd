@@ -1,0 +1,84 @@
+---
+title: "In-class Exercise 4: Spatial Weights"
+---
+
+## Loading packages that will be used for this hands-on exercise
+
+```{r}
+pacman::p_load(sf, spdep, tmap, tidyverse, knitr, GWmodel)
+```
+
+## Importing the datasets that will be used for this in-class exercise
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial", layer = "Hunan")
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+## Performing relational join on the two datasets
+
+```{r}
+hunan <- left_join(hunan,hunan2012) |> 
+  select(1:4, 7, 15)
+```
+
+## Creating a basemap and choropleth map showing the distribution of GDPPC 2012 
+
+```{r}
+basemap <- tm_shape(hunan) +
+  tm_polygons() +
+  tm_text("NAME_3", size=0.5)
+gdppc <- qtm(hunan, "GDPPC")
+tmap_arrange(basemap, gdppc, asp=1, ncol=2)
+```
+
+## Working with Geographically Weighted Summary Statistic 
+
+### Converting sf object into sp object
+
+```{r}
+hunan_sp <- hunan |> as_Spatial()
+```
+
+```{r}
+gwstat <- gwss(data = hunan_sp, vars = "GDPPC", bw = 6, kernel = "bisquare", adaptive = TRUE, longlat = T)
+```
+
+## Computing Contiguity Spatial Weights with Queen's method 
+
+```{r}
+wm_q <- poly2nb(hunan, queen=TRUE)
+summary(wm_q)
+```
+
+Computing contiguity weight matrix with Rook's method
+
+```{r}
+wm_r <- poly2nb(hunan, queen=FALSE)
+summary(wm_r)
+```
+
+```{r}
+longitude <- map_dbl(hunan$geometry, ~st_centroid(.x)[[1]])
+latitude <- map_dbl(hunan$geometry, ~st_centroid(.x)[[2]])
+coords <- cbind(longitude, latitude)
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot(hunan$geometry, border="lightgrey", main="Queen Contiguity")
+plot(wm_q, coords, pch = 19, cex = 0.6, add = TRUE, col= "red")
+plot(hunan$geometry, border="lightgrey", main="Rook Contiguity")
+plot(wm_r, coords, pch = 19, cex = 0.6, add = TRUE, col = "red")
+```
+
+## Computing distance based matrix
+
+```{r}
+k1 <- knn2nb(knearneigh(coords))
+```
+
+```{r}
+k1dists <- unlist(nbdists(k1, coords, longlat = TRUE))
+summary(k1dists)
+```

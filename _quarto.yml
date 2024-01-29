@@ -13,14 +13,16 @@ website:
         href: "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02.html"
       - text: "Hands-on Exercise 3"
         href: "Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03.html"
-      - text: "Hands-on Excersise 4"
+      - text: "Hands-on Exercise 4"
         href: "Hands-on_Ex/Hands-on_Ex04/Hands-on_Ex04.html"
-    - text: "In class Exercises"
+    - text: "In class Exercises"   
       menu:
       - text: "In-class Exercise 2"
         href: "In-class_Ex/In-class_Ex02/In-class_Ex02.html"
       - text: "In-class Exercise 3"
         href: "In-class_Ex/In-class_Ex03/In-class_Ex03-NKDE.html"
+      - text: "In-class Exercise 4"
+        href: "In-class_Ex/In-class_Ex03/In-class_Ex04.html"
     right:
     - href: index.qmd
       text: Home 
