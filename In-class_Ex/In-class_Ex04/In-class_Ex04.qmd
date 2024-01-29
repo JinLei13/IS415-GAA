@@ -22,7 +22,7 @@ hunan <- left_join(hunan,hunan2012) |>
   select(1:4, 7, 15)
 ```
 
-## Creating a basemap and choropleth map showing the distribution of GDPPC 2012 
+## Creating a basemap and choropleth map showing the distribution of GDPPC 2012
 
 ```{r}
 basemap <- tm_shape(hunan) +
@@ -32,7 +32,7 @@ gdppc <- qtm(hunan, "GDPPC")
 tmap_arrange(basemap, gdppc, asp=1, ncol=2)
 ```
 
-## Working with Geographically Weighted Summary Statistic 
+## Working with Geographically Weighted Summary Statistic
 
 ### Converting sf object into sp object
 
@@ -44,7 +44,7 @@ hunan_sp <- hunan |> as_Spatial()
 gwstat <- gwss(data = hunan_sp, vars = "GDPPC", bw = 6, kernel = "bisquare", adaptive = TRUE, longlat = T)
 ```
 
-## Computing Contiguity Spatial Weights with Queen's method 
+## Computing Contiguity Spatial Weights with Queen's method
 
 ```{r}
 wm_q <- poly2nb(hunan, queen=TRUE)
