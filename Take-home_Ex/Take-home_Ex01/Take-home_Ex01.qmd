@@ -1,7 +1,7 @@
 ---
 title: "Take-home Exercise 1"
 author: "Chuang Jin Lei"
-date: "'r Sys.Date()'"
+date: "`r Sys.Date()`"
 execute: 
   warning: false
 ---
@@ -644,11 +644,17 @@ lixels$density <- lixels$density*1000
 ```{r}
 tmap_mode('view')
 tm_shape(lixels) +
-  tm_lines(col="density", legend.hist = TRUE, breaks = c(0,0.004, 0.06, 1,3)) +
+  tm_lines(col="density", legend.hist = TRUE, breaks = c(0,0.004, 0.06, 1,3), palette = "YlOrRd") +
 tm_shape(cg_grab_origin)+
-  tm_dots()
+  tm_dots(col = "blue")
 ```
 
 -   The road segments that are red reveals road segments with relatively higher density as compared with road segments that are in yellow.
 
 -   The roads that are outside of Changi Airport Arrival terminals can be seen to be in red. This signifies that there is relatively higher density of Grab's starting locations from there. This would make sense as most arriving passengers would not have driven to the airport and would require transportation to their accommodations.
+
+# 10 Conclusion 
+
+The Kernel Density Estimate is an effective way to visualise the varying densities of Grab starting locations in Singapore. From the Kernel Density analysis, I was able to identify urban areas such as Changi with high density of Grab starting locations. On the other hand, I was also able to identify rural areas such as Lim Chu Kang which has relatively lower density of Grab starting locations as compared to Changi.
+
+Additionally, the Network Kernel Density Estimate was an useful tool in mapping point events such as Grab starting location meaningfully onto the road network. In the Network Kernel Density Estimate analysis of Changi, I was able to identity roads that have relatively higher density of Grab starting locations which were located at Changi airport arrrival terminals.
