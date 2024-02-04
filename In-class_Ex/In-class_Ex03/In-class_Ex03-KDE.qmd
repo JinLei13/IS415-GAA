@@ -20,6 +20,7 @@ Converting to PPP format
 
 ```{r}
 childcare_ppp <- as.ppp(childcare_sf)
+
 ```
 
 Deriving coastal outline

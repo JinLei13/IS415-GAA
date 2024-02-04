@@ -61,11 +61,11 @@ childcare_sp
 sg_sp
 ```
 
-converting the generic sp format into spatstat's ppp format and plotting the data
+converting the generic sf format into spatstat's ppp format and plotting the data
 
 ```{r}
 library(dplyr)
-childcare_ppp <- select(childcare_sf, geometry) |> as.ppp()
+childcare_ppp <- childcare_sf$geometry |> as.ppp()
 childcare_ppp
 tmap_mode('plot')
 plot(childcare_ppp)

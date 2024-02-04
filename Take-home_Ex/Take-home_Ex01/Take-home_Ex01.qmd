@@ -1,0 +1,654 @@
+---
+title: "Take-home Exercise 1"
+author: "Chuang Jin Lei"
+date: "'r Sys.Date()'"
+execute: 
+  warning: false
+---
+
+# 1 Overview
+
+## 1.1 Setting the Scene
+
+Human mobility, the movement of human beings in space and time, reflects the spatial-temporal characteristics of human behavior. With the advancement Information and Communication Technologies (ICT) especially smart phone, a large volume of data related to human mobility have been collected. By using appropriate GIS analysis methods, these data are potentially useful in supporting smart city planning and management.
+
+In Singapore, one of the important source of data related to human mobility is from [Land Transport Authority (LTA) DataMall](https://datamall.lta.gov.sg/content/datamall/en.html). Two data sets related to human mobility are provided by the portal, they are: Passenger Volume by Origin Destination Train Stations and Passenger Volume by Origin Destination Bus Stops. One of the limitation of these data sets is that their location are biased to either bus stops or MRT/LRT stations. In 2020, another very interesting human mobility data set called [Grab Posisi](https://engineering.grab.com/grab-posisi) was released by GRAB, one of the largest shared taxi operator in South-east Asia. There are two data sets been released and one of them is for Singapore.
+
+## 1.2 Objectives
+
+Geospatial analytics hold tremendous potential to address complex problems facing society. In this study, you are tasked to apply appropriate spatial point patterns analysis methods to discover the geographical and spatial-temporal distribution of Grab hailing services locations in Singapore.
+
+## 1.3 The Task
+
+The specific tasks of this take-home exercise are as follows:
+
+-   Using appropriate function of **sf** and **tidyverse**, preparing the following geospatial data layer in sf tibble data.frames:
+
+    -   Grab taxi location points either by origins or destinations.
+
+    -   Road layer within Singapore excluding outer islands.
+
+    -   Singapore boundary layer excluding outer islands
+
+-   Using the extracted data, derive traditional Kernel Density Estimation layers.
+
+-   Using the extracted data, derive either Network Kernel Density Estimation (NKDE) or Temporal Network Kernel Density Estimation (TNKDE)
+
+-   Using appropriate **tmap** functions, display the kernel density layers on openstreetmap of Singapore.
+
+-   Describe the spatial patterns revealed by the kernel density maps.
+
+# 2 Setup
+
+## 2.1 Packages that will be used for this exercise
+
+1.  tidyverse: It is for performing data science tasks such as importing, wrangling and visualising data Tidyverse consist of a family of R packages that includes:
+
+    readr: It is for importing csv data.
+
+    readxl: It is for importing excel worksheets.
+
+    tidyr: It is for manipulating data.
+
+    dplyr: It is for data wrangling.
+
+    ggplot2: It is for visualising data.
+
+2.  sf: It is for importing, managing, and processing geospatial data
+
+3.  tmap: It is for plotting choropleth maps.
+
+4.  arrow: It is used to read and import parquet data into the R environment.
+
+5.  lubridate: It provides functions to work with date-times and time-spans.
+
+6.  spatstat: It provides a wide range of functions for point pattern analysis.
+
+7.  Raster: It is used for reading, writing, manipulating, analyzing and modeling of spatial data.
+
+8.  spNetwork: It is used to derive network constrained kernel density estimation.
+
+## 2.2 Loading packages that will be used for this exercise
+
+```{r}
+pacman::p_load(tidyverse, sf, tmap, arrow, lubridate, spatstat, raster, spNetwork)
+```
+
+# 3 Data
+
+## 3.1 Description of the data
+
+There are three data that will be used for this exercise
+
+1.  Grab-Posisi of Singapore: This is an aspatial data that has records of bookings of grab rides that are made through the grab app.
+
+    Source: <https://engineering.grab.com/grab-posisi>
+
+2.  Road data set: This is a geospatial data that comprises of road layer within Singapore excluding outer islands.
+
+    Source: OpenStreetMap <https://download.geofabrik.de>
+
+3.  Master Plan 2019 Sub-zone Boundary (No Sea): This is a geosptial data that has the subzone boundary that divides the map of Singapore
+
+    Source: Data.gov.sg <https://beta.data.gov.sg/collections/1749/view>
+
+## 3.2 Importing data into R environment
+
+```{r}
+mpsz <- st_read("data/geospatial", layer = "MPSZ-2019")
+grab <- read_parquet("data/aspatial/GrabPosisi/part-00000-8bbff892-97d2-4011-9961-703e38972569.c000.snappy.parquet")
+road <- st_read("data/geospatial", layer = "gis_osm_roads_free_1")
+```
+
+## 3.3 Checking the contents of the data sets
+
+### 3.3.1 Viewing the Singapore sub-zone boundary data
+
+```{r}
+st_geometry(mpsz) 
+glimpse(mpsz) 
+```
+
+-   This reveals that the mpsz data consists of multipolygon spatial objects.
+
+-   There are a total of 332 multipolygon features.
+
+-   The coordinate reference system used is WGS 84 which is a geographic coordinate system. I will need to transform the coordinate reference system to projected reference system as the geographic coordinate system is not suitable for analysis that uses distance or/and area measurements.
+
+### 3.3.2 Viewing the grab booking data set
+
+```{r}
+glimpse(grab)
+str(grab)
+```
+
+-   The grab dataset consist of 9 attributes and 3034553 number of observations.
+
+-   The grab is also a tibble dataframe which is an aspatial data. I will need to convert it into a geospatial data before further analysis.
+
+-   In addition, there is also a need to isolate observations that only come from Singapore.
+
+### 3.3.3 Viewing the road data set
+
+```{r}
+st_geometry(road) 
+glimpse(road) 
+```
+
+-   This reveals that road consists of multi linestring spatial objects.
+
+-   There are a total of 1767735 multi linestring features which contains roads in Malaysia, Singapore and Brunei. We will need to manipulate the data to only include roads in Singapore.
+
+-   The coordinate reference system used is WGS 84. I will need to transform the coordinate reference system to projected reference system as the geographic coordinate system is not suitable for analysis that uses distance or/and area measurements.
+
+# 4 Data Wrangling
+
+## 4.1 Converting attribute into the correct format
+
+The attribute "pingtimestamp" is in an integer format and i will need to convert it into a date/time format
+
+```{r}
+grab <- grab |> mutate(pingtimestamp = as_datetime(pingtimestamp))
+```
+
+## 4.2 Extracting point events from grab data set
+
+I will need to extract trip starting and ending locations that will be used as point events in this analysis. After the trips have been extracted, the data will be saved for future use.
+
+```{r}
+origin_grab <- grab |>
+  group_by(trj_id) |>
+  arrange(pingtimestamp) |>
+  filter(row_number()==1)
+destination_grab <- grab |>
+  group_by(trj_id) |>
+  arrange(desc(pingtimestamp)) |>
+  filter(row_number()==1)
+write_rds(origin_grab, "data/rds/origin_grab.rds")
+write_rds(destination_grab, "data/rds/destination_grab.rds")
+```
+
+## 4.3 Converting aspatial data into geospatial data
+
+The origin_grab is a tibble dataframe, hence, there is a need to convert it into sf tibble dataframe format using it's location information.
+
+```{r}
+origin_grab_sf <- st_as_sf(origin_grab,
+                      coords = c("rawlng", "rawlat"),
+                      crs = 4326) %>%
+  st_transform(crs = 3414)
+```
+
+### 4.3.1 Checking if the orgin_grab_sf has been converted correctly
+
+```{r}
+head(origin_grab_sf)
+st_crs(origin_grab_sf)
+```
+
+-   It has been correctly converted into a sf tibble dataframe.
+
+-   It has 28000 point features.
+
+-   It's coordinate reference system is SVY21 which is appropriate for analysis in Singapore.
+
+-   It has the correct EPSG code of 3414.
+
+# 5 Working with projections
+
+As mentioned earlier, the geographic coordinate system is not suitable for analysis involving distance or area measurement. Hence, there is a need to convert mpsz into projection coordinate system.
+
+```{r}
+mpsz <- st_transform(mpsz, crs = 3414)
+
+```
+
+Checking to see if the data has been transformed correctly.
+
+```{r}
+st_crs(mpsz)
+```
+
+-   MPSZ has been transformed into SVY21 with the correct EPSG code of 3414.
+
+Likewise, we will do the same for the road data set.
+
+```{r}
+road <- road |> st_transform(crs = 3414)
+```
+
+Checking to see if the transformation was done correctly
+
+```{r}
+st_crs(road)
+```
+
+-   Road has been transformed into SVY21 and the correct EPSG code of 3414.
+
+# 6 Data Preparation
+
+## 6.1 Obtaining Singapore boundary layer excluding outer islands
+
+1.  The outer islands are saved filtered and saved as mpsz_exc
+2.  The geometries of mpsz and mpsz_exc are merged using st_union() function
+3.  The main islands is derived by using st_difference() function to remove the overlaps of mpsz and mpsz_exc
+
+```{r}
+mpsz_exc <- mpsz |> filter(PLN_AREA_N == "SOUTHERN ISLANDS" | PLN_AREA_N == "WESTERN ISLANDS" | PLN_AREA_N == "NORTH-EASTERN ISLANDS")
+exc_sg <- mpsz_exc |> st_union()
+mpsz_sg <- mpsz |> st_union()
+mpsz_main <- st_difference(mpsz_sg, exc_sg)
+```
+
+Checking to see if Singapore boundary area excluding outer islands has been derived correctly
+
+```{r}
+plot(mpsz_main)
+```
+
+## 6.2 Obtaining the roads that are in mainland Singapore
+
+-   Obtaining roads in Changi sub-zone for Network Kernel Density Estimation.
+
+```{r}
+road_sg <- st_intersection(road, mpsz_main)
+write_rds(road_sg, "data/rds/road_sg.rds") 
+```
+
+### 6.2.1 Restricting roads that are used for this analysis
+
+1.  Roads that are not suitable for cars are removed from this analysis as it would not be possible for Grabs drivers to pick up passengers from those roads.
+2.  Additionally, highway links and very small roads are also removed from this analysis as it would not be possible for Grab drivers to pick up passengers from those roads.
+    -   This step is done to reduce the large number of roads from the data set to dramatically improve speed of this analysis.
+
+```{r}
+road_sg_car <- road_sg |> filter(code == 5111 | code == 5112 | code == 5113 | code == 5114 | code == 5115 | code == 5121 | code == 5122 | code == 5123 | code == 5124 | code == 5125) 
+```
+
+Plotting of roads in mainland Singapore
+
+```{r}
+tmap_mode('plot')
+map_road_sg <- tm_shape(road_sg_car) +
+  tm_lines(lwd = 0.1) +
+  tm_borders(alpha = 1, lwd = 1 ) +
+  tm_layout(main.title = "Map of roads in Singapore",
+            main.title.position = "center",
+            main.title.size = 1) + 
+  tm_credits("Source: Master Plan Subzone Boundary 2019 (no sea) from data.gov.sg\n and Singapore Roads from OpenStreetMap", 
+             position = c("left", "bottom")) + 
+  tm_scale_bar(width = 0.25) + 
+   tm_compass(type="4star", size = 2)
+  
+map_road_sg
+```
+
+# 7 Kernel Density Estimation Analysis
+
+## 7.1 Converting Grab's origin spatial feature object to ppp object format
+
+This step is needed as the functions from "spatstat" requires the object to be in ppp format.
+
+```{r}
+origin_ppp <- origin_grab_sf$geometry |> as.ppp()
+```
+
+## 7.2 Checking for duplication
+
+```{r}
+any(duplicated(origin_ppp))
+```
+
+-   Function has returned that there are not duplicates. Hence, I do not need to deal with duplication and can move on.
+
+## 7.3 Creating Owin object
+
+The purpose of the Owin object is to confine the analysis within Singapore's boundary
+
+```{r}
+sg_owin <- mpsz_main |> as.owin()
+```
+
+Checking to see that the Owin object is Singapore Boundary excluding outer islands
+
+```{r}
+plot(sg_owin)
+```
+
+## 7.4 Combining Grab's origin point events with Owin object
+
+```{r}
+originsg_ppp <- origin_ppp[sg_owin]
+```
+
+### 7.4.1 Plotting of Grab's origin point events in Singapore
+
+```{r}
+tmap_mode('plot')
+plot(originsg_ppp, size = 0.5) 
+```
+
+### 7.4.2 Rescaling KDE values
+
+This is done to convert the unit of measurement from meter to kilometers
+
+```{r}
+grabsg_ppp_km <- rescale(originsg_ppp, 1000, "km")
+```
+
+## 7.5 Computing Kernel Density with automatic bandwidth
+
+There are four available methods to determine the bandwidth and they are
+
+1.  bw.diggle()
+2.  bw.ppl()
+3.  bw.CvL()
+4.  bw.scott()
+
+All four methods are used to compute Kernel Density Estimation with automatic bandwidth
+
+```{r}
+kde_grabsg_bw <- density(grabsg_ppp_km, sigma=bw.diggle, edge=TRUE, kernel="gaussian")
+kde_grabsg_ppl <- density(grabsg_ppp_km, sigma=bw.ppl, edge=TRUE, kernel="gaussian")
+kde_grabsg_cvl <- density(grabsg_ppp_km, sigma=bw.CvL, edge=TRUE, kernel="gaussian")
+kde_grabsg_scott <- density(grabsg_ppp_km, sigma=bw.scott, edge=TRUE, kernel="gaussian")
+```
+
+## 7.6 Plotting of Kernel Density with automatic bandwidth
+
+```{r}
+par(mfrow = c(2,2))
+plot(kde_grabsg_bw, main = "bw.diggle")
+plot(kde_grabsg_ppl, main = "bw.ppl")
+plot(kde_grabsg_cvl, main = "bw.CvL")
+plot(kde_grabsg_scott, main = "bw.scott")
+```
+
+## 7.7 Computing Kernel Density Estimation with different kernel methods
+
+There are four available kernel methods and they are:
+
+1.  Gaussian
+2.  Epanechnikov
+3.  Quartic
+4.  Dics
+
+All four kernel methods are used to compute Kernel Density Estimation with automatic bandwidth
+
+```{r}
+par(mfrow=c(2,2))
+plot(density(grabsg_ppp_km, 
+             sigma=bw.ppl, 
+             edge=TRUE, 
+             kernel="gaussian"), 
+     main="KDE with Gaussian Kernel method")
+plot(density(grabsg_ppp_km, 
+             sigma=bw.ppl, 
+             edge=TRUE, 
+             kernel="epanechnikov"), 
+     main="KDE with Epanechnikov Kernel method")
+plot(density(grabsg_ppp_km, 
+             sigma=bw.ppl, 
+             edge=TRUE, 
+             kernel="quartic"), 
+     main="KDE with Quartic Kernel Method")
+plot(density(grabsg_ppp_km, 
+             sigma=bw.ppl, 
+             edge=TRUE, 
+             kernel="disc"), 
+     main="KDE with Disc Kernel method")
+```
+
+## 7.8 Computing Kernel Density Estimation with fixed and and adaptive bandwidth
+
+A fixed bandwidth of 600 meters is selected for Kernel Density Estimation with fixed bandwidth
+
+```{r}
+kde_grabsg_600 <- density(grabsg_ppp_km, sigma=0.6, edge=TRUE, kernel="gaussian")
+```
+
+Adaptive bandwidth is the preferred option in this analysis as the study area of Singapore comprises of rural and urban areas. Hence, the adaptive bandwidth will be able to overcome the problem of a fixed bandwidth where is it very sensitive to highly skewed distribution.
+
+```{r}
+kde_grabsg_adap <- adaptive.density(grabsg_ppp_km, method = "kernel")
+```
+
+### 7.8.1 Plotting of fixed bandwith and adaptive bandwidth Kernel density estimation
+
+```{r}
+par(mfrow= c(1,2))
+plot(kde_grabsg_600, main = "KDE with Fixed Bandwidth")
+plot(kde_grabsg_adap, main = "KDE with Adaptive Bandwidth")
+```
+
+## 7.9 Visualising Kernel Density Estimation output in tmap
+
+The adaptive bandwidth method will be selected for reasons stated above
+
+### 7.9.1 Converting KDE output into grid object
+
+This is done so that it is suitable for mapping purposes.
+
+```{r}
+gridded_kde_grabsg_adap <- as(kde_grabsg_adap, "SpatialGridDataFrame")
+```
+
+### 7.9.2 Converting grided output into raster
+
+```{r}
+kde_grabsg_adap_raster <- raster(gridded_kde_grabsg_adap)
+kde_grabsg_adap_raster
+```
+
+-   The coordinate reference system is missing.
+
+### 7.9.3 Assigning Coordinate Reference System
+
+This has to be done as the coordinate Reference System was missing.
+
+```{r}
+projection(kde_grabsg_adap_raster) <- CRS("+init=EPSG:3414")
+kde_grabsg_adap_raster
+```
+
+### 7.9.4 Visualising Kernel Density Estimation with adaptive bandwidth on tmap
+
+```{r}
+kde_adap_map <-tm_shape(kde_grabsg_adap_raster) + 
+  tm_raster("v") +
+  tm_layout(legend.position = c("right", "bottom"), frame = FALSE, legend.text.size = 0.3) +
+  tm_layout(main.title = "KDE of Grab's pickups in Singapore",
+            main.title.position = "center",
+            main.title.size = 0.8) + 
+  tm_scale_bar(width = 0.2) + 
+   tm_compass(type="4star", size = 1) + 
+   tm_credits("Source: Master Plan Subzone Boundary 2019 (no sea) from data.gov.sg/n
+              Grab-Posisi of Singapore from https://engineering.grab.com/grab-posisi",  position = c("left", "bottom"))
+   
+mpsz_map <- tm_shape(mpsz) +
+  tm_fill() + 
+  tm_borders() + 
+  tmap_style("natural") +
+  tm_text('PLN_AREA_N', size = 0.13, col = "white") +
+  tm_layout(main.title = "Map of Subzones in Singapore",
+            main.title.position = "center",
+            main.title.size = 0.8) + 
+   tm_credits("Source: Master Plan Subzone Boundary 2019 (no sea) from data.gov.sg",  position = c("left", "bottom"))
+tmap_arrange(kde_adap_map, mpsz_map, asp=1, ncol=2)
+  
+```
+
+From the Kernel Density Estimate plot and map of sub-zones in Singapore, I am able to identify two different sub-zones with drastically different densities. It can be seen that the Changi sub-zone has a high density of Grab starting locations, whereas the Lim Chu Kang subzone has a low density of Grab starting locations. This is probably due the the fact that Changi airport is located inside the Changi sub-zone and hence there are a high number of grab bookings from the arrival terminal.
+
+## 7.10 Computing Kernel Density Estimate for selected study areas
+
+From the earlier analysis, I was able to identify two sub-zones with drastically different densities and they are Changi and Lim Chu kang. In this part of the analysis, I would like to isolate the study areas to the Changi and Lim Chu Kang sub-zones to look at these areas with greater detail.
+
+### 7.10.1 Extracting study sub-zones
+
+```{r}
+cg <- mpsz |> filter(PLN_AREA_N == "CHANGI")
+lck <- mpsz |> filter(PLN_AREA_N == "LIM CHU KANG")
+```
+
+### 7.10.2 Plotting of study areas
+
+This is done to ensure that the correct sub-zones have been extracted
+
+```{r}
+par(mfrow = c(1,2))
+plot(cg$geometry, main = "Changi")
+plot(lck$geometry, main = "Lim Chu Kang")
+```
+
+### 7.10.3 Creating Owin object of study area
+
+This is done to restrict analysis within the study areas.
+
+```{r}
+cg_owin <- as.owin(cg)
+lck_owin <- as.owin(lck)
+```
+
+### 7.10.4 Combining Grab's starting location point event with Owin object study area
+
+```{r}
+grab_cg_ppp <- origin_ppp[cg_owin]
+grab_lck_ppp <- origin_ppp[lck_owin]
+```
+
+### 7.10.5 Rescaling measurement from meters to kilometers
+
+```{r}
+grab_cg_ppp_km <- rescale(grab_cg_ppp, 1000, "km")
+grab_lck_ppp_km <- rescale(grab_lck_ppp, 1000, "km")
+```
+
+### 7.10.6 Plotting of grab starting locations in the study areas
+
+```{r}
+par(mfrow = c(1,2))
+plot(grab_cg_ppp_km, main = "Changi")
+plot(grab_lck_ppp_km, main = "Lim Chu Kang")
+```
+
+### 7.10.7 Computing Fixed Bandwidth Kernel Density Estimate for the study area
+
+For purpose of comparison, 250mm will be used as the bandwidth
+
+```{r}
+cg_fx_density <- density(grab_cg_ppp_km, 
+                         sigma = 0.25,
+                         edge = TRUE, 
+                         kernel = "gaussian")
+lck_fx_density <- density(grab_lck_ppp_km,
+                          sigma = 0.25, 
+                          edge = TRUE, 
+                          kernel = "gaussian")
+```
+
+### Plotting of Adaptive Bandwidth Kernel Density Estimate of study area
+
+```{r}
+par(mfrow = c(1,2))
+plot(cg_fx_density, main = "KDE of Changi")
+plot(lck_fx_density, main = "KDE of LimChuKang")
+```
+
+When comparing the density of the sub-zone Changi and Lim Chu Kang, we can tell that the density are drastically different from the density scale in the maps. In the Changi map, the scale is from 0 to 1000, while in the Lim Chu Kang map, the scale is from 0 to 4. From the analysis of Kernel Density Estimate of the study areas, we can conclude that the density of grab starting locations in Changi is way higher than the density of grab starting locations in Lim Chu Kang.
+
+# 8 Network Kernel Density Estimation Analysis
+
+## 8.1 Initial plot of roads and Grab starting locations in study area
+
+### 8.1.1 Restricting Grab starting location and roads to be inside the Changi study area
+
+1.  The st_intersection() function allows me to derive roads that are in the Changi study area.
+2.  The filter() function is used to filter out roads that are not for cars and places that are unlikely for Grab drivers to pick up their passengers such as at an exit of a highway. This is done to reduce the number of roads and speed up the speed of the analysis.
+3.  Likewise, st_intersection() function is used to derive grab starting locations that are inside the Changi study area.
+
+```{r}
+road_cg <- st_intersection(road, cg)
+road_cg_car <- road_cg |> filter(code == 5111 | code == 5112 | code == 5113 | code == 5114 | code == 5115 | code == 5121 | code == 5122 | code == 5123 | code == 5124 | code == 5125) 
+cg_grab_origin <- st_intersection(origin_grab_sf, cg)
+```
+
+### 8.1.2 Plotting of roads and Grab starting location in study area. 
+
+```{r}
+tmap_mode('view')
+tm_shape(cg_grab_origin) + 
+  tm_dots() + 
+  tm_shape(road_cg_car) + 
+  tm_lines() 
+  
+```
+
+## 8.2 Preparing the lixel object
+
+1.  st_cast() function is used to convert the object into sfc_LINESTRING format which is needed before it can be placed in the lixelize_lines() function.
+2.  The length of a lixel is set to 750 meters and the minimum length of a lixel is set to 375 meters.
+
+```{r}
+road_cg_car_ms <- road_cg_car |>
+  st_cast("LINESTRING")
+lixels <- lixelize_lines(road_cg_car_ms, 750, mindist = 375)
+```
+
+## 8.3 Generating line center points
+
+This is done to generate a SpatialPointDataFrame with line center points.
+
+```{r}
+samples <- lines_center(lixels)
+```
+
+## 8.4 Computing Network Kernel Density Estimation
+
+```{r}
+densities <- nkde(road_cg_car_ms, 
+                  events = cg_grab_origin,
+                  w = rep(1,nrow(cg_grab_origin)),
+                  samples = samples,
+                  kernel_name = "quartic",
+                  bw = 300, 
+                  div= "bw", 
+                  method = "simple", 
+                  digits = 1, 
+                  tol = 1,
+                  grid_shape = c(1,1), 
+                  max_depth = 8,
+                  agg = 5, 
+                  sparse = TRUE,
+                  verbose = FALSE)
+```
+
+## 8.3 Visualising Network Kernel Density Estimation
+
+### 8.3.1 Inserting computed density values into samples and lixels object as density field
+
+```{r}
+samples$density <- densities
+lixels$density <- densities
+```
+
+### 8.3.2 Rescaling the density values from number of events per meter to number of events per kilometer
+
+```{r}
+samples$density <- samples$density*1000
+lixels$density <- lixels$density*1000
+```
+
+### 8.3.3 Interactive visualisation of NKDE
+
+```{r}
+tmap_mode('view')
+tm_shape(lixels) +
+  tm_lines(col="density", legend.hist = TRUE, breaks = c(0,0.004, 0.06, 1,3)) +
+tm_shape(cg_grab_origin)+
+  tm_dots()
+```
+
+-   The road segments that are red reveals road segments with relatively higher density as compared with road segments that are in yellow.
+
+-   The roads that are outside of Changi Airport Arrival terminals can be seen to be in red. This signifies that there is relatively higher density of Grab's starting locations from there. This would make sense as most arriving passengers would not have driven to the airport and would require transportation to their accommodations.
