@@ -436,3 +436,11 @@ tm_shape(ehsa_sig) +
   tm_borders(alpha = 0.4) +
   tm_text('VILLENG', size = 0.4, col = "white") 
 ```
+
+# 7 Conclusion 
+
+From the Global Spatial Autocorrelation analysis, the Global Moran's I Statistic was 0.000623 which is bigger than zero and suggest that dengue cases are clustered. But, from the Global Moran's I test and Global Moran's Permutation test the P-values were 0.4514 and 0.78 respectively. These P-values are bigger than the alpha values of 0.05, hence I do not have sufficient evidence to reject the null hypothesis that the dengue cases in Tainan are randomly distributed.
+
+From the Local Spatial Autocorrelation Analysis, it was revealed that there were five village outliers (Xixian Village, Tian Fei Village, Sanhe Village, Zheng Xing Village and Shen Zhou Village) with low dengue cases but were surrounded with villages that had high dengue cases. I was also able to find two village clsuters (Ren'ai Village and Liu He village) which had high number of dengue cases and are surrounded by villages with high number of dengue cases as well. But, since none of the P-values for the outlier and cluster villages were bigger than the alpha value of 0.05, I do not have sufficient evidence to conclude that these villages are indeed outliers and clusters.
+
+Lastly, from the emerging hot spot analysis, I was able to identify three emerging hot spot patterns which are no pattern detected, sporadic cold spot and sporadic hot spot. I would suggest for the Taiwanese government to compare the environmental conditions between villages which were identified as sporadic cold spot and sporadic hot spot to find out how they can change the environmental conditions in villages that were identified as hot spots to reduce the number of dengue cases that are emerging from these villages.
