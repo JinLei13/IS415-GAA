@@ -6,9 +6,9 @@ execute:
   warning: false
 ---
 
-# 1 Overview 
+# 1 Overview
 
-## 1.1 Setting the scene 
+## 1.1 Setting the scene
 
 [Dengue Hemorrhagic Fever](https://www.cdc.gov/dengue/resources/denguedhf-information-for-health-care-practitioners_2009.pdf) (in short dengue fever) is one of the most widespread mosquito-borne diseases in the most tropical and subtropical regions. It is an acute disease caused by dengue virus infection which is transmitted by female Aedes aegypti and Aedes albopictus mosquitoes. In 2015, Taiwan had recorded the most severe dengue fever outbreak with more than 43,000 dengue cases and 228 deaths. Since then, the annual reported dengue fever cases were maintained at the level of not more than 200 cases. However, in 2023, Taiwan recorded 26703 dengue fever cases. Figure below reveals that more than 25,000 cases were reported at Tainan City.
 
@@ -18,7 +18,7 @@ execute:
 
 ![](https://is415-ay2023-24t2.netlify.app/img/df3.jpg)
 
-## 1.2 Objectives 
+## 1.2 Objectives
 
 As a curious geospatial analytics green horn, I am interested to discover:
 
@@ -26,7 +26,7 @@ As a curious geospatial analytics green horn, I am interested to discover:
 
 -   If the outbreak is indeed spatial and spatio-temporal dependent, then, you would like to detect where are the clusters and outliers, and the emerging hot spot/cold spot areas.
 
-## 1.3 The Tasks 
+## 1.3 The Tasks
 
 The specific tasks of this take-home exercise are as follows:
 
@@ -46,7 +46,7 @@ The specific tasks of this take-home exercise are as follows:
 
 -   Describe the spatial patterns revealed by the analysis above.
 
-# 2 Setup  
+# 2 Setup
 
 ## 2.1 Packages that will be used for this exercise
 
@@ -74,9 +74,9 @@ The specific tasks of this take-home exercise are as follows:
 pacman:: p_load(tidyverse, sf, tmap, sfdep, lubridate)
 ```
 
-# 3 Data 
+# 3 Data
 
-## 3.1 Description of the Data 
+## 3.1 Description of the Data
 
 -   TAIWAN_VILLAGE_2020, a geospatial data of village boundary of Taiwan. It is in ESRI shapefile format. The data is in Taiwan Geographic Coordinate System. (Source: [Historical map data of the village boundary: TWD97 longitude and latitude](https://data.gov.tw/en/datasets/130549))
 
@@ -88,7 +88,7 @@ pacman:: p_load(tidyverse, sf, tmap, sfdep, lubridate)
 
     -   最小統計區中心點Y: y-coordinate
 
-## 3.2 Uploading the data into the environment 
+## 3.2 Uploading the data into the environment
 
 -   st_read() function from sf package is used to import the shapefile file
 
@@ -106,11 +106,11 @@ head(tn)
 head(dengue)
 ```
 
-## 3.3 Data Wrangling 
+## 3.3 Data Wrangling
 
-### 3.3.1 Obtaining study area in sf polygon feature 
+### 3.3.1 Obtaining study area in sf polygon feature
 
--    filter() function from dplyr package is used to confine the study area layer in sf polygon features to D01, D02, D04, D06, D07, D08, D32 and D39 counties of Tainan City, Taiwan.
+-   filter() function from dplyr package is used to confine the study area layer in sf polygon features to D01, D02, D04, D06, D07, D08, D32 and D39 counties of Tainan City, Taiwan.
 
 ```{r}
 Tainan <-  tn |> filter(TOWNID == "D01" | TOWNID == "D02" | TOWNID == "D04"| TOWNID ==   "D06" | TOWNID == "D07" | TOWNID == "D08" | TOWNID == "D32" | TOWNID == "D39") 
@@ -128,11 +128,11 @@ st_crs(Tainan)
 
 -   EPSG code is 3824
 
-![Information on TWD97 Source: <https://epsg.io/3824>](images/Screenshot 2024-03-03 at 4.47.19 AM.png)
+![Information on TWD97 Source: <https://epsg.io/3824>](images/Screenshot%202024-03-03%20at%204.47.19%20AM.png)
 
 Upon checking information on TWD97, the unit of measurements and EPSG code matches.
 
-### 3.3.2 Data Wrangling on Dengue dataframe 
+### 3.3.2 Data Wrangling on Dengue dataframe
 
 -   as_date() function from the lubridate package is used to convert the attribute from character format into the correct date format
 
@@ -152,7 +152,7 @@ denguewk <- dengue2023 |> filter(epidemiologyweek == 31:50)
 denguewk <- denguewk |> mutate(最小統計區中心點X = as.numeric(最小統計區中心點X), 最小統計區中心點Y = as.numeric(最小統計區中心點Y) )
 ```
 
-## 3.4 Data processing 
+## 3.4 Data processing
 
 ### 3.4.1 Converting denguewk aspatial data into geospatial data
 
@@ -171,7 +171,7 @@ head(denguesf)
 st_crs(denguesf)
 ```
 
-### 3.4.2 Obtaining boundary of the study area 
+### 3.4.2 Obtaining boundary of the study area
 
 -   The st_union() function from sf package is used to combine geometries without resolving the boundary
 
@@ -185,7 +185,7 @@ Checking to see if we have obtained the correct study area boundary
 plot(Tn_bound)
 ```
 
-### 3.4.3 Obtaining dengue cases that are in the study area 
+### 3.4.3 Obtaining dengue cases that are in the study area
 
 -   The st_intersection() function from sf package is used to find the points that fall into the study area
 
@@ -238,9 +238,9 @@ dengue_st <- spacetime(.data = dengue_prest3, .geometry = Tainan, .loc_col = "VI
 is_spacetime_cube(dengue_st)
 ```
 
-# 4 Global Spatial Autocorrelation Analysis 
+# 4 Global Spatial Autocorrelation Analysis
 
-## 4.1 Deriving the spatial weights 
+## 4.1 Deriving the spatial weights
 
 -   activate() function from the dplyr package is used to activate the geometry context of the spacetime cube
 
@@ -277,7 +277,7 @@ glimpse(gmoranI)
 
 -   Global Moran's I statistic is \> 0 which suggest that dengue cases are clustered and dengue cases seems to appear in similar locations.
 
-## 4.3 Performing Global Moran's I test 
+## 4.3 Performing Global Moran's I test
 
 -   global_moran_test() function from the sfdep package is used to conduct the Global Moran's I test
 
@@ -321,7 +321,7 @@ lisa <- dengue_nb |>
   unnest(local_moran)
 ```
 
-## 5.2 Joining data 
+## 5.2 Joining data
 
 -   left_join() from the dplyr package is being used to join the data to provide geospatial boundary of each village before visualisation
 
@@ -330,7 +330,7 @@ tainan_lisa <- Tainan |> left_join(lisa,
                                    by = "VILLCODE")
 ```
 
-## 5.3 Visualising Local Moran's I 
+## 5.3 Visualising Local Moran's I
 
 ```{r}
 tmap_mode("plot")
@@ -345,7 +345,7 @@ map1
 
 -   The local Moran statistic of villages in Tainan mainly ranges from 0 to 20 with a smaller subgroup lying between -20 to 0.
 
-## 5.4 Visualising p-value of Local Moran's I statistic 
+## 5.4 Visualising p-value of Local Moran's I statistic
 
 ```{r}
 tmap_mode("plot")
@@ -360,7 +360,7 @@ map2
 
 -   From the mapping of p-values, we can observed that none of the p-values are statistically significant at an alpha value of 0.05.
 
-## 5.5 Visualising local Moran's I and p-value 
+## 5.5 Visualising local Moran's I and p-value
 
 ```{r}
 tmap_arrange(map1, map2, ncol = 2)
@@ -388,7 +388,7 @@ map3
 
 -   But, since none of the p-value for the villages are statistically significant we do not have sufficient evidence to conclude that these villages are indeed outliers and clusters.
 
-# 6 Emerging Hotspot analysis 
+# 6 Emerging Hotspot analysis
 
 ## 6.1 Computing EHSA
 
@@ -399,7 +399,7 @@ set.seed(123)
 ehsa <- emerging_hotspot_analysis(x = dengue_st, .var = "cases", k = 1, nsim = 99)
 ```
 
-## 6.2 Visualising the distribution of EHSA classes 
+## 6.2 Visualising the distribution of EHSA classes
 
 ```{r}
 ggplot(data = ehsa, 
@@ -437,7 +437,7 @@ tm_shape(ehsa_sig) +
   tm_text('VILLENG', size = 0.4, col = "white") 
 ```
 
-# 7 Conclusion 
+# 7 Conclusion
 
 From the Global Spatial Autocorrelation analysis, the Global Moran's I Statistic was 0.000623 which is bigger than zero and suggest that dengue cases are clustered. But, from the Global Moran's I test and Global Moran's Permutation test the P-values were 0.4514 and 0.78 respectively. These P-values are bigger than the alpha values of 0.05, hence I do not have sufficient evidence to reject the null hypothesis that the dengue cases in Tainan are randomly distributed.
 
