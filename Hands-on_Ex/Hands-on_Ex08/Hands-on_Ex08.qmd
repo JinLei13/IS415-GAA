@@ -332,7 +332,7 @@ bw.fixed <- bw.gwr(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD +
                      PROX_MRT   + PROX_PARK + PROX_PRIMARY_SCH + 
                      PROX_SHOPPING_MALL + PROX_BUS_STOP + NO_Of_UNITS + 
                      FAMILY_FRIENDLY + FREEHOLD, 
-                   data=condo_resale.sp, 
+                   data=condo_resale.sp,                       
                    approach="CV", 
                    kernel="gaussian", 
                    adaptive=FALSE, 
