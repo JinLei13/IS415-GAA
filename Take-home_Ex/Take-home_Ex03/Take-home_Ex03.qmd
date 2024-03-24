@@ -1,0 +1,435 @@
+---
+title: "Take-home Exercise 3"
+author: "Chuang Jin Lei"
+date: "`r Sys.Date()`"
+execute: 
+  warning: false
+---
+
+# 1. Overview
+
+## 1.1 The Task
+
+In this take-home exercise, you are required to select one of the module of your proposed Geospatial Analytics Shiny Application and complete the following tasks:
+
+-   To evaluate and determine the necessary R packages needed for your Shiny application are supported in R CRAN,
+
+-   To prepare and test the specific R codes can be run and returned the correct output as expected,
+
+-   To determine the parameters and outputs that will be exposed on the Shiny applications, and
+
+-   To select the appropriate Shiny UI components for exposing the parameters determine above.
+
+All teams must consult the [prototype](https://habaritanzania.netlify.app/) page of [AY2022-2023 January Term Group 3: Tanzania Tourism Analysis](https://thehabaritanzania.netlify.app/). There are three main modules in ths application the are: [Exploratory Data Analysis](https://habaritanzania.netlify.app/eda/eda) & [Confirmatory Data Analysis](https://habaritanzania.netlify.app/eda/cda), [Cluster Analysis](https://habaritanzania.netlify.app/analysis/clustering) and [Decision Tree Analysis](https://habaritanzania.netlify.app/analysis/decision_tree). Each of them were prepared by one of the member of the project team. After that they combined them into the Prototype page of their project website.
+
+Take-home Exercise 3 will be similar to one of the prototype module prepared above in term of content but with the following differences:
+
+-   You are required to prepare the prototype module report as Take-home Exercise 3 submission. This mean, it has to be published on your own coursework page.
+
+-   You are required to include a section called UI design for the different components of the UIs for the proposed design.
+
+For storyboarding the UI Design, please consult [Storyboard](https://giniceseah.netlify.app/posts/2021-07-31-storyboard/) link.
+
+## 1.2 Submission Instructions
+
+This is an individual assignment. You are required to work on the take-home exercises and prepare submission individually.
+
+The specific submission instructions are as follows:
+
+-   The write-up of the take-home exercise must be in **Quarto html document** format. You are required to publish the write-up on [**Netlify**](https://www.netlify.com/).
+
+-   Zip the take-home exercise folder and upload it onto eLearn. If the size of the zip file is beyond the capacity of eLearn, you can upload it on SMU OneDrive and provide the download link on eLearn.
+
+# 2. Setup
+
+## 2.1 Packages
+
+```{r}
+pacman::p_load(tidyverse, sf, tmap, spdep, shiny)
+```
+
+## 2.2 Data
+
+1.  Listings.csv consist of detailed Airbnb listing data in Singapore
+
+2.  Master Plan 2019 Sub-zone Boundary (No Sea): This is a geosptial data that has the subzone boundary that divides the map of Singapore
+
+    Source: Data.gov.sg <https://beta.data.gov.sg/collections/1749/view>
+
+### 2.2.1 Importing data into R environment
+
+```{r}
+listing <- read.csv("data/aspatial/listings.csv")
+mpsz <- st_read("data/geospatial", layer = "MP14_SUBZONE_WEB_PL")
+```
+
+### 2.2.2 Viewing the data
+
+```{r}
+glimpse(listing)
+glimpse(mpsz)
+st_crs(mpsz)
+```
+
+-   Reveals that the listing data has 3457 observations and 75 variables.
+
+-   Reveals that the mpsz data has 323 multipolygon spatial features and 16 variables. Furthermore, the coordinate reference system is SVY21 and EPSG code is 9001.
+
+### 2.2.3 Data Wrangling
+
+1.  As the listing data has a large number of unnecessary variables, the select() function from dplyr package will be used to only select variables that are of interest and to make the analysis more efficient
+2.  There is a need to remove the dollars signs in the variable price before changing it to a numeric data type
+3.  There is a need to change price to numeric data type so that the variable can be used for calculations
+4.  na.omit() function is used to remove any observations with missing data
+
+```{r}
+listing_clean <- listing |> select(id, neighbourhood_cleansed, neighbourhood_group_cleansed, latitude, longitude, price, property_type, room_type) |> lapply(gsub,pattern="$",fixed=TRUE,replacement="") |> as.data.frame() |> mutate(price = as.numeric(price)) |> na.omit()
+```
+
+Removing the outer island from the analysis as there are no airbnb listings there
+
+```{r}
+mpsz_main <- mpsz |> filter(PLN_AREA_N != "SOUTHERN ISLANDS" | PLN_AREA_N != "WESTERN ISLANDS" | PLN_AREA_N != "NORTH-EASTERN ISLANDS")
+
+```
+
+### 2.2.4 Data Processing
+
+#### 2.2.4.1 Assigning the correct EPSG code
+
+mpsz's coordinate reference system is SVY21 and EPSG code is 9001.
+
+![](images/Screenshot%202024-03-24%20at%208.57.55%20PM.png)
+
+Information of SVY21 source: [https://epsg.io/3414](https://epsg.io/3414#)
+
+The coordinate reference system does not seem to match the EPSG code.
+
+Hence, st_set_crs from sf package will be used to input the correct EPSG code.
+
+```{r}
+mpsz_main <- st_set_crs(mpsz_main, 3414)
+```
+
+Checking to see if the EPSG code has been updated correctly
+
+```{r}
+st_crs(mpsz_main)
+```
+
+#### 2.2.4.2 Converting values in fields to uppercase
+
+The values in neighbourhood_cleansed and neighbourhood_group_cleansed are not in uppercase while the values in mpsz are in uppercase. Before joining the dataset, it is crucial to ensure that they are in the same case so the value matches.
+
+```{r}
+listing_clean <- listing_clean |> mutate_at(.vars = vars(neighbourhood_cleansed, neighbourhood_group_cleansed), .funs = list(toupper)) 
+```
+
+#### 2.2.4.3 Calculating aggregation of prices
+
+Calculating mean, median, maximum and minimum prices for each neighbourhood
+
+-   group_by() function from the dplyr package is used to group the observations by neightbourhood
+
+-   summarise_at() function is used to calculate aggregation of prices in each neighbourhood.
+
+```{r}
+mean_price <- listing_clean |> 
+  group_by(neighbourhood_cleansed) |> 
+  summarise_at(vars(price), list(mean_p = mean))
+
+median_price <- listing_clean |> 
+  group_by(neighbourhood_cleansed) |> 
+  summarise_at(vars(price), list(median_p = median))
+
+max_price <- listing_clean |> 
+  group_by(neighbourhood_cleansed) |> 
+  summarise_at(vars(price), list(max_p = max))
+
+min_price <- listing_clean |> 
+  group_by(neighbourhood_cleansed) |> 
+  summarise_at(vars(price), list(min_p = min))
+```
+
+#### 2.2.4.4 Combining all aggregation prices into a single dataframe
+
+-   Left_join() function is used to combine all data into a single dataframe
+
+```{r}
+aggregate_price <- mean_price |> left_join(max_price) |> left_join(min_price) |> left_join(median_price)
+```
+
+#### 2.2.4.5 Performing relational join
+
+This is done to join the attribute data from aggregate_price dataframe to the spatialpolygondataframe of mpsz
+
+```{r}
+airbnb <- mpsz_main |> left_join(aggregate_price, by = c("PLN_AREA_N" = "neighbourhood_cleansed"))
+airbnb[is.na(airbnb)] <- 0
+```
+
+# 3.Visualizing aggregated price indicators by planning subzone
+
+```{r}
+mean <- tm_shape(airbnb) + 
+  tm_fill("mean_p", n = 5, style = "quantile") +
+  tm_borders() + 
+  tm_layout(main.title = "Mean prices of airbnb listing")
+median <- tm_shape(airbnb) + 
+  tm_fill("median_p", n = 5, style = "quantile") +
+  tm_borders() + 
+  tm_layout(main.title = "Median prices of airbnb listing")
+max <- tm_shape(airbnb) + 
+  tm_fill("max_p", n = 5, style = "quantile") +
+  tm_borders() + 
+  tm_layout(main.title = "Max prices of airbnb listing")
+min <- tm_shape(airbnb) + 
+  tm_fill("min_p", n = 5, style = "quantile") +
+  tm_borders() + 
+  tm_layout(main.title = "Minimum prices of airbnb listing")
+mean 
+median
+max
+min
+```
+
+# 4. Performing local measure of spatial autocorrelation
+
+## 4.1 Computing contiguity spatial weights
+
+```{r}
+wm_q <- poly2nb(airbnb, queen = TRUE)
+summary(wm_q)
+```
+
+Assigning equal weights to each neighbouring polygon
+
+```{r}
+rswm_q <- nb2listw(wm_q, 
+                   style="W", 
+                   zero.policy = TRUE)
+rswm_q
+```
+
+## 4.2 Computing local Moran's I
+
+```{r}
+localMI_mean <- localmoran(airbnb$mean_p, rswm_q)
+localMI_median <- localmoran(airbnb$median_p, rswm_q)
+localMI_max <- localmoran(airbnb$max_p, rswm_q)
+localMI_min <- localmoran(airbnb$min_p, rswm_q)
+```
+
+## 4.3 Mapping the Local Moran's I statistic
+
+The local moran's I dataframe have to be appended onto the mpsz spatialpolygondataframe before they can be mapped
+
+```{r}
+airbnb.localMI_mean <- cbind(mpsz_main, localMI_mean) |>
+  rename(Pr.Ii = Pr.z....E.Ii..)
+airbnb.localMI_median <- cbind(mpsz_main, localMI_median) |>
+  rename(Pr.Ii = Pr.z....E.Ii..)
+airbnb.localMI_max <- cbind(mpsz_main, localMI_max) |>
+  rename(Pr.Ii = Pr.z....E.Ii..)
+airbnb.localMI_min <- cbind(mpsz_main, localMI_min) |>
+  rename(Pr.Ii = Pr.z....E.Ii..)
+```
+
+### 4.3.1 Mapping Local Moran's I values
+
+```{r}
+map_i_mean <- tm_shape(airbnb.localMI_mean) +
+  tm_fill(col = "Ii", 
+          style = "pretty",
+          palette = "RdBu",
+          title = "local moran statistics") +
+  tm_borders(alpha = 0.5)
+map_i_mean
+map_i_median <- tm_shape(airbnb.localMI_median) +
+  tm_fill(col = "Ii", 
+          style = "pretty",
+          palette = "RdBu",
+          title = "local moran statistics") +
+  tm_borders(alpha = 0.5)
+map_i_median
+map_i_max <- tm_shape(airbnb.localMI_max) +
+  tm_fill(col = "Ii", 
+          style = "pretty",
+          palette = "RdBu",
+          title = "local moran statistics") +
+  tm_borders(alpha = 0.5)
+map_i_max
+map_i_min <- tm_shape(airbnb.localMI_min) +
+  tm_fill(col = "Ii", 
+          style = "pretty",
+          palette = "RdBu",
+          title = "local moran statistics") +
+  tm_borders(alpha = 0.5)
+map_i_min
+```
+
+### 4.3.2 Mapping local Moran's I p-values
+
+```{r}
+map_pval_mean <- tm_shape(airbnb.localMI_mean) +
+  tm_fill(col = "Pr.Ii", 
+          breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+          palette="-Blues", 
+          title = "local Moran's I p-values") +
+  tm_borders(alpha = 0.5)
+map_pval_mean
+map_pval_median <- tm_shape(airbnb.localMI_median) +
+  tm_fill(col = "Pr.Ii", 
+          breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+          palette="-Blues", 
+          title = "local Moran's I p-values") +
+  tm_borders(alpha = 0.5)
+map_pval_median
+map_pval_max <- tm_shape(airbnb.localMI_max) +
+  tm_fill(col = "Pr.Ii", 
+          breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+          palette="-Blues", 
+          title = "local Moran's I p-values") +
+  tm_borders(alpha = 0.5)
+map_pval_max
+map_pval_min <- tm_shape(airbnb.localMI_min) +
+  tm_fill(col = "Pr.Ii", 
+          breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+          palette="-Blues", 
+          title = "local Moran's I p-values") +
+  tm_borders(alpha = 0.5)
+map_pval_min
+```
+
+### 4. Mapping both local Moran's I values and p-values
+
+```{r}
+tmap_arrange(map_i_mean, map_pval_mean, asp = 1, ncol = 2)
+tmap_arrange(map_i_median, map_pval_median, asp = 1, ncol = 2)
+tmap_arrange(map_i_max, map_pval_max, asp = 1, ncol = 2)
+tmap_arrange(map_i_min, map_pval_min, asp = 1, ncol = 2)
+```
+
+# 5 Creating a LISA Cluster Map
+
+## 5.1 Plotting Moran Scatterplot
+
+```{r}
+sp_mean <- moran.plot(airbnb$mean_p, rswm_q,
+                      labels = as.character(airbnb$SUBZONE_N),
+                      xlab = "mean price", 
+                      ylab = "Spatially Lag mean price")
+```
+
+## 5.2 Preparing LISA map classes
+
+```{r}
+quadrant <- vector(mode = "numeric", length = nrow(localMI_mean))
+quadrant2 <- vector(mode = "numeric", length = nrow(localMI_median))
+quadrant3 <- vector(mode = "numeric", length = nrow(localMI_max))
+quadrant4 <- vector(mode = "numeric", length = nrow(localMI_min))
+```
+
+Deriving spatially lagged mean price and centering the laggged mean prices around its mean
+
+```{r}
+airbnb$lag_mean_p <- lag.listw(rswm_q, airbnb$mean_p)
+DV_mean <- airbnb$lag_mean_p - mean(airbnb$lag_mean_p)
+airbnb$lag_median_p <- lag.listw(rswm_q, airbnb$median_p)
+DV_median <- airbnb$lag_median_p - mean(airbnb$lag_median_p)
+airbnb$lag_max_p <- lag.listw(rswm_q, airbnb$max_p)
+DV_max <- airbnb$lag_max_p - mean(airbnb$lag_max_p)
+airbnb$lag_min_p <- lag.listw(rswm_q, airbnb$min_p)
+DV_min <- airbnb$lag_min_p - mean(airbnb$lag_min_p)
+```
+
+Centering the Local Moran's I around their mean
+
+```{r}
+lm_i_mean <- localMI_mean[,1] - mean(localMI_mean[,1])
+lm_i_median <- localMI_median[,1] - mean(localMI_median[,1])
+lm_i_max <- localMI_max[,1] - mean(localMI_max[,1])
+lm_i_min <- localMI_min[,1] - mean(localMI_min[,1])
+```
+
+Defining the four categories
+
+```{r}
+quadrant[DV_mean <0 & lm_i_mean>0] <- 1
+quadrant[DV_mean >0 & lm_i_mean<0] <- 2
+quadrant[DV_mean <0 & lm_i_mean<0] <- 3  
+quadrant[DV_mean >0 & lm_i_mean>0] <- 4      
+quadrant2[DV_median <0 & lm_i_median>0] <- 1
+quadrant2[DV_median >0 & lm_i_median<0] <- 2
+quadrant2[DV_median <0 & lm_i_median<0] <- 3  
+quadrant2[DV_median >0 & lm_i_median>0] <- 4   
+quadrant3[DV_max <0 & lm_i_max>0] <- 1
+quadrant3[DV_max >0 & lm_i_max<0] <- 2
+quadrant3[DV_max <0 & lm_i_max<0] <- 3  
+quadrant3[DV_max >0 & lm_i_max>0] <- 4    
+quadrant4[DV_min <0 & lm_i_min>0] <- 1
+quadrant4[DV_min >0 & lm_i_min<0] <- 2
+quadrant4[DV_min <0 & lm_i_min<0] <- 3  
+quadrant4[DV_min >0 & lm_i_min>0] <- 4    
+```
+
+## 5.3 Plotting LISA map
+
+```{r}
+airbnb.localMI_mean$quadrant <- quadrant
+colors <- c("#ffffff", "#2c7bb6", "#abd9e9", "#fdae61", "#d7191c")
+clusters <- c("insignificant", "low-low", "low-high", "high-low", "high-high")
+
+lisa_mean <- tm_shape(airbnb.localMI_mean) +
+  tm_fill(col = "quadrant", 
+          style = "cat", 
+          palette = colors[c(sort(unique(quadrant)))+1], 
+          labels = clusters[c(sort(unique(quadrant)))+1],
+          popup.vars = c("")) +
+  tm_view(set.zoom.limits = c(11,17)) +
+  tm_borders(alpha=0.5)
+lisa_mean
+airbnb.localMI_median$quadrant <- quadrant2
+lisa_median <- tm_shape(airbnb.localMI_median) +
+  tm_fill(col = "quadrant", 
+          style = "cat", 
+          palette = colors[c(sort(unique(quadrant)))+1], 
+          labels = clusters[c(sort(unique(quadrant)))+1],
+          popup.vars = c("")) +
+  tm_view(set.zoom.limits = c(11,17)) +
+  tm_borders(alpha=0.5)
+lisa_median
+airbnb.localMI_max$quadrant <- quadrant3
+lisa_max <- tm_shape(airbnb.localMI_max) +
+  tm_fill(col = "quadrant", 
+          style = "cat", 
+          palette = colors[c(sort(unique(quadrant)))+1], 
+          labels = clusters[c(sort(unique(quadrant)))+1],
+          popup.vars = c("")) +
+  tm_view(set.zoom.limits = c(11,17)) +
+  tm_borders(alpha=0.5)
+lisa_max
+airbnb.localMI_min$quadrant <- quadrant4
+lisa_min <- tm_shape(airbnb.localMI_min) +
+  tm_fill(col = "quadrant", 
+          style = "cat", 
+          palette = colors[c(sort(unique(quadrant)))+1], 
+          labels = clusters[c(sort(unique(quadrant)))+1],
+          popup.vars = c("")) +
+  tm_view(set.zoom.limits = c(11,17)) +
+  tm_borders(alpha=0.5)
+lisa_min
+```
+
+## 5.4 Plotting both mean prices and lisa map
+
+```{r}
+tmap_arrange(mean, lisa_mean, asp = 1, ncol = 2)
+```
+
+# 6. UI Design
+
+![](images/Screenshot%202024-03-25%20at%2012.38.05%20AM.png)
+
+1.  selectInput(inputId = "method", label = "Aggregation Method", choices = list("Mean Price" = "mean", "Median Price" = "median", "Max Price" = "max", "Minimum Price" = "min")
+2.  selectInput(inputId = "map", label = "Plots to display", choices = list("Local Moran I Statistic plot" = "MI", "Local Moran I p-value plot" = "p-value", "LISA plot" = "lisa")
