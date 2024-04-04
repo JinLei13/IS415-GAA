@@ -4,7 +4,7 @@ title: "Hands-on Exercise 11: Spatial Interaction Models"
 
 ---
 
-# 1. Getting Started 
+# 1. Getting Started
 
 Packages that will be used for this Exercise
 
@@ -144,7 +144,7 @@ od_data <- od_data |>
   summarise(MORNING_PEAK = sum(TRIPS))
 ```
 
-# 3. Visualising Spatial Interaction 
+# 3. Visualising Spatial Interaction
 
 Removing intro-zonal flows
 
@@ -189,7 +189,7 @@ tm_shape() +
            alpha = 0.3)
 ```
 
-# 3. Computing Distance Matrix 
+# 3. Computing Distance Matrix
 
 Converting from sf dataframe to SpatialPolygonDataFrame
 

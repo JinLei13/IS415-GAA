@@ -89,8 +89,14 @@ listing_clean <- listing |> select(id, neighbourhood_cleansed, neighbourhood_gro
 Removing the outer island from the analysis as there are no airbnb listings there
 
 ```{r}
-mpsz_main <- mpsz |> filter(PLN_AREA_N != "SOUTHERN ISLANDS" | PLN_AREA_N != "WESTERN ISLANDS" | PLN_AREA_N != "NORTH-EASTERN ISLANDS")
-
+mpsz_exc <- mpsz |> filter(SUBZONE_N == "JURONG ISLAND AND BUKOM" | SUBZONE_N == "SUDONG" | SUBZONE_N == "SEMAKAU" | SUBZONE_N == "SOUTHERN GROUP" | SUBZONE_N == "NORTH-EASTERN ISLANDS")
+mpsz_exc_union <- mpsz_exc |> st_union()
+mpsz_union <- mpsz |> st_union()
+mpsz_main_union <- st_difference(mpsz_union, mpsz_exc_union)
+mpsz_main <- mpsz |> st_intersection(mpsz_main_union) 
+mpsz2 <- select(mpsz, SUBZONE_N, geometry)
+mpsz_main2 <- mpsz_main |> st_drop_geometry()
+mpsz_main3 <- mpsz2 |> inner_join(mpsz_main2)
 ```
 
 ### 2.2.4 Data Processing
@@ -108,13 +114,13 @@ The coordinate reference system does not seem to match the EPSG code.
 Hence, st_set_crs from sf package will be used to input the correct EPSG code.
 
 ```{r}
-mpsz_main <- st_set_crs(mpsz_main, 3414)
+mpsz_main3 <- st_set_crs(mpsz_main3, 3414)
 ```
 
 Checking to see if the EPSG code has been updated correctly
 
 ```{r}
-st_crs(mpsz_main)
+st_crs(mpsz_main3)
 ```
 
 #### 2.2.4.2 Converting values in fields to uppercase
@@ -136,19 +142,19 @@ Calculating mean, median, maximum and minimum prices for each neighbourhood
 ```{r}
 mean_price <- listing_clean |> 
   group_by(neighbourhood_cleansed) |> 
-  summarise_at(vars(price), list(mean_p = mean))
+  summarise_at(vars(price), list(mean_price = mean))
 
 median_price <- listing_clean |> 
   group_by(neighbourhood_cleansed) |> 
-  summarise_at(vars(price), list(median_p = median))
+  summarise_at(vars(price), list(median_price = median))
 
 max_price <- listing_clean |> 
   group_by(neighbourhood_cleansed) |> 
-  summarise_at(vars(price), list(max_p = max))
+  summarise_at(vars(price), list(max_price = max))
 
 min_price <- listing_clean |> 
   group_by(neighbourhood_cleansed) |> 
-  summarise_at(vars(price), list(min_p = min))
+  summarise_at(vars(price), list(min_price = min))
 ```
 
 #### 2.2.4.4 Combining all aggregation prices into a single dataframe
@@ -164,7 +170,7 @@ aggregate_price <- mean_price |> left_join(max_price) |> left_join(min_price) |>
 This is done to join the attribute data from aggregate_price dataframe to the spatialpolygondataframe of mpsz
 
 ```{r}
-airbnb <- mpsz_main |> left_join(aggregate_price, by = c("PLN_AREA_N" = "neighbourhood_cleansed"))
+airbnb <- mpsz_main3 |> left_join(aggregate_price, by = c("PLN_AREA_N" = "neighbourhood_cleansed"))
 airbnb[is.na(airbnb)] <- 0
 ```
 
@@ -172,19 +178,19 @@ airbnb[is.na(airbnb)] <- 0
 
 ```{r}
 mean <- tm_shape(airbnb) + 
-  tm_fill("mean_p", n = 5, style = "quantile") +
+  tm_fill("mean_price", n = 5, breaks = c(0,50, 115.6, 145.5, 235.5,max(airbnb$mean_p)), palette = "YlOrRd") +
   tm_borders() + 
   tm_layout(main.title = "Mean prices of airbnb listing")
 median <- tm_shape(airbnb) + 
-  tm_fill("median_p", n = 5, style = "quantile") +
+  tm_fill("median_price", n = 5, style = "quantile") +
   tm_borders() + 
   tm_layout(main.title = "Median prices of airbnb listing")
 max <- tm_shape(airbnb) + 
-  tm_fill("max_p", n = 5, style = "quantile") +
+  tm_fill("max_price", n = 5, style = "quantile") +
   tm_borders() + 
   tm_layout(main.title = "Max prices of airbnb listing")
 min <- tm_shape(airbnb) + 
-  tm_fill("min_p", n = 5, style = "quantile") +
+  tm_fill("min_price", n = 5, style = "quantile") +
   tm_borders() + 
   tm_layout(main.title = "Minimum prices of airbnb listing")
 mean 
@@ -214,10 +220,10 @@ rswm_q
 ## 4.2 Computing local Moran's I
 
 ```{r}
-localMI_mean <- localmoran(airbnb$mean_p, rswm_q)
-localMI_median <- localmoran(airbnb$median_p, rswm_q)
-localMI_max <- localmoran(airbnb$max_p, rswm_q)
-localMI_min <- localmoran(airbnb$min_p, rswm_q)
+localMI_mean <- localmoran(airbnb$mean_price, rswm_q)
+localMI_median <- localmoran(airbnb$median_price, rswm_q)
+localMI_max <- localmoran(airbnb$max_price, rswm_q)
+localMI_min <- localmoran(airbnb$min_price, rswm_q)
 ```
 
 ## 4.3 Mapping the Local Moran's I statistic
@@ -225,7 +231,7 @@ localMI_min <- localmoran(airbnb$min_p, rswm_q)
 The local moran's I dataframe have to be appended onto the mpsz spatialpolygondataframe before they can be mapped
 
 ```{r}
-airbnb.localMI_mean <- cbind(mpsz_main, localMI_mean) |>
+airbnb.localMI_mean <- cbind(airbnb, localMI_mean) |>
   rename(Pr.Ii = Pr.z....E.Ii..)
 airbnb.localMI_median <- cbind(mpsz_main, localMI_median) |>
   rename(Pr.Ii = Pr.z....E.Ii..)
@@ -243,7 +249,8 @@ map_i_mean <- tm_shape(airbnb.localMI_mean) +
           style = "pretty",
           palette = "RdBu",
           title = "local moran statistics") +
-  tm_borders(alpha = 0.5)
+  tm_borders(alpha = 0.5) +
+   tm_layout(main.title = "Local Moran Statistic of mean Airbnb prices" , title.size = 1)
 map_i_mean
 map_i_median <- tm_shape(airbnb.localMI_median) +
   tm_fill(col = "Ii", 
@@ -275,29 +282,36 @@ map_pval_mean <- tm_shape(airbnb.localMI_mean) +
   tm_fill(col = "Pr.Ii", 
           breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
           palette="-Blues", 
-          title = "local Moran's I p-values") +
-  tm_borders(alpha = 0.5)
+          title = "local Moran's p-values") +
+  tm_borders(alpha = 0.5) + 
+   tm_layout(main.title = "Local Moran p-value of mean Airbnb prices", title.size = 1)
+
 map_pval_mean
 map_pval_median <- tm_shape(airbnb.localMI_median) +
   tm_fill(col = "Pr.Ii", 
           breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
           palette="-Blues", 
-          title = "local Moran's I p-values") +
+          title = "local Moran's p-values") +
   tm_borders(alpha = 0.5)
 map_pval_median
 map_pval_max <- tm_shape(airbnb.localMI_max) +
   tm_fill(col = "Pr.Ii", 
           breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
           palette="-Blues", 
-          title = "local Moran's I p-values") +
+          title = "local Moran's p-values") +
   tm_borders(alpha = 0.5)
 map_pval_max
 map_pval_min <- tm_shape(airbnb.localMI_min) +
   tm_fill(col = "Pr.Ii", 
           breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
           palette="-Blues", 
-          title = "local Moran's I p-values") +
-  tm_borders(alpha = 0.5)
+          title = "local Moran's p-values") +
+  tm_borders(alpha = 0.5) +
+  tm_layout(legend.outside = TRUE,
+            legend.height = 0.45, 
+            legend.width = 5.0,
+            legend.position = c("right", "bottom"),
+            frame = FALSE)
 map_pval_min
 ```
 
@@ -358,19 +372,24 @@ Defining the four categories
 quadrant[DV_mean <0 & lm_i_mean>0] <- 1
 quadrant[DV_mean >0 & lm_i_mean<0] <- 2
 quadrant[DV_mean <0 & lm_i_mean<0] <- 3  
-quadrant[DV_mean >0 & lm_i_mean>0] <- 4      
+quadrant[DV_mean >0 & lm_i_mean>0] <- 4  
+signif <- 0.05  
+quadrant[airbnb.localMI_mean$Pr.Ii>signif] <- 0
 quadrant2[DV_median <0 & lm_i_median>0] <- 1
 quadrant2[DV_median >0 & lm_i_median<0] <- 2
 quadrant2[DV_median <0 & lm_i_median<0] <- 3  
 quadrant2[DV_median >0 & lm_i_median>0] <- 4   
+quadrant2[airbnb.localMI_median$Pr.Ii>signif] <- 0
 quadrant3[DV_max <0 & lm_i_max>0] <- 1
 quadrant3[DV_max >0 & lm_i_max<0] <- 2
 quadrant3[DV_max <0 & lm_i_max<0] <- 3  
-quadrant3[DV_max >0 & lm_i_max>0] <- 4    
+quadrant3[DV_max >0 & lm_i_max>0] <- 4  
+quadrant3[airbnb.localMI_max$Pr.Ii>signif] <- 0
 quadrant4[DV_min <0 & lm_i_min>0] <- 1
 quadrant4[DV_min >0 & lm_i_min<0] <- 2
 quadrant4[DV_min <0 & lm_i_min<0] <- 3  
-quadrant4[DV_min >0 & lm_i_min>0] <- 4    
+quadrant4[DV_min >0 & lm_i_min>0] <- 4 
+quadrant4[airbnb.localMI_min$Pr.Ii>signif] <- 0
 ```
 
 ## 5.3 Plotting LISA map
@@ -387,7 +406,8 @@ lisa_mean <- tm_shape(airbnb.localMI_mean) +
           labels = clusters[c(sort(unique(quadrant)))+1],
           popup.vars = c("")) +
   tm_view(set.zoom.limits = c(11,17)) +
-  tm_borders(alpha=0.5)
+  tm_borders(alpha=0.5) + 
+  tm_text("SUBZONE_N", 0.12)
 lisa_mean
 airbnb.localMI_median$quadrant <- quadrant2
 lisa_median <- tm_shape(airbnb.localMI_median) +
